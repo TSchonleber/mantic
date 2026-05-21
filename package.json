@@ -8,6 +8,7 @@
     "dev:desktop": "pnpm --filter mantic-desktop tauri dev",
     "build:desktop": "pnpm --filter mantic-desktop tauri build",
     "test": "pnpm -r test",
+    "test:e2e": "pnpm --filter mantic-e2e test",
     "lint": "pnpm -r lint"
   },
   "packageManager": "pnpm@9.12.0",
