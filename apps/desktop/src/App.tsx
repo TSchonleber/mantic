@@ -8,6 +8,7 @@ import {
 import Pair from "./routes/Pair";
 import Wallet from "./routes/Wallet";
 import Account from "./routes/Account";
+import Fleet from "./routes/Fleet";
 
 type Status = "loading" | "unpaired" | "paired-no-wallet" | "paired-with-wallet";
 
@@ -15,6 +16,7 @@ export default function App() {
   const [status, setStatus] = useState<Status>("loading");
   const [account, setAccount] = useState<AccountInfo | null>(null);
   const [wallet, setWallet] = useState<WalletCredentials | null>(null);
+  const [showAccount, setShowAccount] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -79,14 +81,19 @@ export default function App() {
     );
   }
 
-  return (
-    <Account
-      account={account}
-      onSignOut={() => {
-        setAccount(null);
-        setWallet(null);
-        setStatus("unpaired");
-      }}
-    />
-  );
+  if (showAccount) {
+    return (
+      <Account
+        account={account}
+        onSignOut={() => {
+          setAccount(null);
+          setWallet(null);
+          setShowAccount(false);
+          setStatus("unpaired");
+        }}
+      />
+    );
+  }
+
+  return <Fleet onOpenAccount={() => setShowAccount(true)} />;
 }
