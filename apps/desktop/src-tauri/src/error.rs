@@ -25,6 +25,15 @@ pub enum AppError {
 
     #[error("server returned {status}: {body}")]
     Server { status: u16, body: String },
+
+    #[error("sqlite error: {0}")]
+    Sqlite(#[from] rusqlite::Error),
+
+    #[error("brainctl returned error {code}: {message}")]
+    Brainctl { code: i64, message: String },
+
+    #[error("brainctl unavailable: {reason}")]
+    BrainctlUnavailable { reason: String },
 }
 
 impl serde::Serialize for AppError {

@@ -1,4 +1,5 @@
 mod account;
+mod bundle;
 mod commands;
 mod error;
 mod heartbeat;
