@@ -1,4 +1,9 @@
 use crate::account::{decode_claims, AccountInfo};
+use crate::agent::{
+    config::{AgentConfigInput, AgentDetails, AgentSummary},
+    signal::Signal,
+    AgentRuntime,
+};
 use crate::brain_db::{BrainDb, BrainStatus, EventSummary, MemorySummary};
 use crate::brainctl_client::BrainctlClient;
 use crate::error::Result;
@@ -276,4 +281,78 @@ fn open_browser(url: &str) {
         vec![url]
     })
     .spawn();
+}
+
+// --- Agent runtime commands ---
+
+#[tauri::command]
+pub async fn agent_create(
+    config: AgentConfigInput,
+    runtime: State<'_, Arc<AgentRuntime>>,
+    brainctl: State<'_, Arc<BrainctlClient>>,
+) -> Result<AgentSummary> {
+    let id = match brainctl
+        .entity_create(&config.name, "agent", Some("project:mantic"))
+        .await
+    {
+        Ok(v) => v
+            .get("entity_id")
+            .or_else(|| v.get("id"))
+            .map(|n| n.to_string())
+            .unwrap_or_else(crate::agent::signal::short_id),
+        Err(_) => crate::agent::signal::short_id(),
+    };
+    runtime.spawn(config.into_config_with_id(id)).await
+}
+
+#[tauri::command]
+pub async fn agent_list(runtime: State<'_, Arc<AgentRuntime>>) -> Result<Vec<AgentSummary>> {
+    Ok(runtime.list().await)
+}
+
+#[tauri::command]
+pub async fn agent_get(
+    id: String,
+    runtime: State<'_, Arc<AgentRuntime>>,
+) -> Result<AgentDetails> {
+    runtime.get(&id).await
+}
+
+#[tauri::command]
+pub async fn agent_arm(
+    id: String,
+    runtime: State<'_, Arc<AgentRuntime>>,
+) -> Result<AgentSummary> {
+    runtime.arm(&id).await
+}
+
+#[tauri::command]
+pub async fn agent_pause(
+    id: String,
+    runtime: State<'_, Arc<AgentRuntime>>,
+) -> Result<AgentSummary> {
+    runtime.pause(&id).await
+}
+
+#[tauri::command]
+pub async fn agent_kill(id: String, runtime: State<'_, Arc<AgentRuntime>>) -> Result<()> {
+    runtime.kill(&id).await
+}
+
+#[tauri::command]
+pub async fn agent_fire_test_signal(
+    id: String,
+    signal: Signal,
+    runtime: State<'_, Arc<AgentRuntime>>,
+) -> Result<()> {
+    runtime.dispatch(&id, signal).await
+}
+
+#[tauri::command]
+pub async fn agent_set_llm_key(
+    id: String,
+    api_key: String,
+    runtime: State<'_, Arc<AgentRuntime>>,
+) -> Result<()> {
+    runtime.set_llm_key(&id, &api_key).await
 }
