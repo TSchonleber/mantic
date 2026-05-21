@@ -1,6 +1,12 @@
 //! Integration test that spawns a real `AgentRuntime` against a real
 //! brainctl-mcp sidecar and a fake LLM backend. Skipped cleanly if
 //! `MANTIC_BRAINCTL_BIN` is not set and no default sidecar is present.
+//!
+//! This test depends on `AgentRuntime::spawn_with_backend` and
+//! `AgentRuntime::executor()`, both gated behind the `test-helpers` Cargo
+//! feature. Run with:
+//!   cargo test --features test-helpers --test agent_loop_integration
+#![cfg(feature = "test-helpers")]
 
 use async_trait::async_trait;
 use desktop_lib::agent::config::{AgentConfig, LlmBackendKind};

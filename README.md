@@ -66,11 +66,41 @@ trading wallet — you fund it manually from your master wallet, and Mantic has
 full control over its contents. To stop trading, just drain the session wallet
 back to your master.
 
+## Agent Runtime (sub-project #4)
+
+Mantic ships a paper-trading agent runtime that drives an LLM-based decision
+loop. On first launch a "Default Paper Agent" is auto-created. To exercise
+the loop end-to-end:
+
+1. Open Fleet (post-wallet landing screen).
+2. Click "Create Agent" — set a name, max position, NL overlay, and paste
+   an Anthropic API key. Click Create.
+3. Click "Arm" on the agent row.
+4. Click "Fire test signal" — a synthetic signal for `BONK` is dispatched.
+5. Watch the live tape: decision event + (if buy/sell) trade record appear
+   within 1–3 seconds.
+
+### LLM backends
+
+- `anthropic-direct` (BYO key) — works today. Key is stored in the OS
+  keychain at `agent-llm-anthropic-key-<agent-id>`.
+- `mantic-proxy` — returns "Mantic proxy is not available yet" until
+  sub-project #8 lands.
+
+### Brain persistence
+
+Every decision is logged via `decision_add`; every trade via
+`event_add(event_type="result")`; every skip via `event_add(event_type="observation")`;
+every reasoning chain via `event_add(event_type="decision")`. The Mantic
+client uses agent-id `mantic-desktop`; per-agent identity lives as a
+brain.db entity in scope `project:mantic`.
+
 ## Tests
 
 ```bash
-pnpm -r test                                            # 6 mock-license + 34 desktop frontend + 2 e2e
-cd apps/desktop/src-tauri && cargo test                 # 44 Rust unit tests + 2 integration
+pnpm -r test                                            # 6 mock-license + 52 desktop frontend + 2 e2e
+cd apps/desktop/src-tauri && cargo test                 # ~93 Rust unit tests + 3 integration (brainctl + wallet + agent loop)
+pnpm --filter mantic-desktop-smoke test                 # Playwright real-browser smoke for Fleet (requires `playwright install chromium`)
 pnpm --filter mantic-e2e test                           # binary smoke (requires release build)
 ```
 
