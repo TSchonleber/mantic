@@ -49,6 +49,18 @@ pub fn run() {
             commands::pair_with_code,
             commands::current_account,
             commands::sign_out,
+            commands::brain_status,
+            commands::recent_events,
+            commands::recent_memories,
+            commands::memory_add,
+            commands::event_add,
+            commands::decision_add,
+            commands::entity_create,
+            commands::entity_observe,
+            commands::agent_register,
+            commands::agent_wrap_up,
+            commands::agent_orient,
+            commands::memory_search,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
