@@ -89,11 +89,26 @@ impl LlmKeyStore {
     }
 
     pub fn save(&self, agent_id: &str, api_key: &str) -> Result<()> {
+        #[cfg(test)]
+        {
+            test_llm_keys()
+                .lock()
+                .unwrap()
+                .insert(agent_id.to_string(), api_key.to_string());
+            return Ok(());
+        }
+        #[cfg(not(test))]
         self.entry(agent_id)?.set_password(api_key)?;
+        #[cfg(not(test))]
         Ok(())
     }
 
     pub fn load(&self, agent_id: &str) -> Result<Option<String>> {
+        #[cfg(test)]
+        {
+            return Ok(test_llm_keys().lock().unwrap().get(agent_id).cloned());
+        }
+        #[cfg(not(test))]
         match self.entry(agent_id)?.get_password() {
             Ok(p) => Ok(Some(p)),
             Err(keyring::Error::NoEntry) => Ok(None),
@@ -102,6 +117,12 @@ impl LlmKeyStore {
     }
 
     pub fn clear(&self, agent_id: &str) -> Result<()> {
+        #[cfg(test)]
+        {
+            test_llm_keys().lock().unwrap().remove(agent_id);
+            return Ok(());
+        }
+        #[cfg(not(test))]
         match self.entry(agent_id)?.delete_credential() {
             Ok(()) => Ok(()),
             Err(keyring::Error::NoEntry) => Ok(()),
@@ -114,6 +135,14 @@ impl Default for LlmKeyStore {
     fn default() -> Self {
         Self::new()
     }
+}
+
+#[cfg(test)]
+fn test_llm_keys() -> &'static std::sync::Mutex<std::collections::HashMap<String, String>> {
+    static KEYS: std::sync::OnceLock<
+        std::sync::Mutex<std::collections::HashMap<String, String>>,
+    > = std::sync::OnceLock::new();
+    KEYS.get_or_init(|| std::sync::Mutex::new(std::collections::HashMap::new()))
 }
 
 #[cfg(test)]
