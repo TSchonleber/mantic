@@ -15,6 +15,7 @@ pub struct BrainctlClient {
     inner: Arc<Mutex<Option<ClientState>>>,
     binary_path: PathBuf,
     db_path: PathBuf,
+    agent_id: String,
     ids: IdGen,
     request_timeout: Duration,
 }
@@ -27,11 +28,12 @@ struct ClientState {
 }
 
 impl BrainctlClient {
-    pub fn new(binary_path: PathBuf, db_path: PathBuf) -> Self {
+    pub fn new(binary_path: PathBuf, db_path: PathBuf, agent_id: impl Into<String>) -> Self {
         Self {
             inner: Arc::new(Mutex::new(None)),
             binary_path,
             db_path,
+            agent_id: agent_id.into(),
             ids: IdGen::new(),
             request_timeout: Duration::from_secs(5),
         }
@@ -39,6 +41,10 @@ impl BrainctlClient {
 
     /// Send a JSON-RPC request and await its response.
     /// Spawns the subprocess on first call. On crash, respawns up to 3 times.
+    ///
+    /// This is the low-level entry point — it sends `method` verbatim. For
+    /// brainctl tool dispatch, use [`call_tool`] which wraps the call in the
+    /// MCP `tools/call` envelope (see the typed helpers below).
     pub async fn call(&self, method: &str, params: Value) -> Result<Value> {
         let mut attempts = 0;
         let mut last_err: Option<AppError> = None;
@@ -60,6 +66,42 @@ impl BrainctlClient {
         Err(last_err.unwrap_or(AppError::BrainctlUnavailable {
             reason: "exhausted retries".into(),
         }))
+    }
+
+    /// Invoke a brainctl tool through the MCP `tools/call` envelope.
+    ///
+    /// brainctl-mcp speaks the MCP SDK protocol — clients must address tools
+    /// as `tools/call` with `{"name": tool_name, "arguments": {...}}`. The
+    /// server wraps results as `{content: [{type: "text", text: <json>}], isError: bool}`.
+    /// We unwrap the first text block back into a JSON Value for callers.
+    ///
+    /// NOTE: brainctl may return tool-level errors inside the wrapper body
+    /// (e.g. `{"error": "..."}`) while keeping `isError: false`. Callers that
+    /// need to distinguish protocol errors from tool errors must inspect the
+    /// returned Value's `error` field themselves. See TODO in the integration
+    /// test follow-ups for a typed error surface.
+    pub async fn call_tool(&self, tool: &str, mut arguments: Value) -> Result<Value> {
+        if !arguments.is_object() {
+            arguments = json!({});
+        }
+        let envelope = json!({
+            "name": tool,
+            "arguments": arguments,
+        });
+        let raw = self.call("tools/call", envelope).await?;
+        // Unwrap MCP TextContent → JSON Value.
+        if let Some(content) = raw.get("content").and_then(|v| v.as_array()) {
+            if let Some(first) = content.first() {
+                if let Some(text) = first.get("text").and_then(|v| v.as_str()) {
+                    return serde_json::from_str::<Value>(text).map_err(|e| AppError::Brainctl {
+                        code: -32700,
+                        message: format!("brainctl tool result was not valid JSON: {e}"),
+                    });
+                }
+            }
+        }
+        // Fallthrough: server returned something we don't recognize — surface as-is.
+        Ok(raw)
     }
 
     async fn try_call(&self, method: &str, params: Value) -> Result<Value> {
@@ -186,14 +228,18 @@ impl BrainctlClient {
         scope: Option<&str>,
         tags: Option<&str>,
     ) -> Result<Value> {
-        let mut params = json!({ "content": content, "category": category });
+        let mut params = json!({
+            "agent_id": self.agent_id,
+            "content": content,
+            "category": category,
+        });
         if let Some(s) = scope {
             params["scope"] = json!(s);
         }
         if let Some(t) = tags {
             params["tags"] = json!(t);
         }
-        self.call("memory_add", params).await
+        self.call_tool("memory_add", params).await
     }
 
     pub async fn event_add(
@@ -202,11 +248,15 @@ impl BrainctlClient {
         content: &str,
         importance: Option<f64>,
     ) -> Result<Value> {
-        let mut params = json!({ "event_type": event_type, "content": content });
+        let mut params = json!({
+            "agent_id": self.agent_id,
+            "event_type": event_type,
+            "summary": content,
+        });
         if let Some(i) = importance {
             params["importance"] = json!(i);
         }
-        self.call("event_add", params).await
+        self.call_tool("event_add", params).await
     }
 
     pub async fn decision_add(
@@ -215,11 +265,15 @@ impl BrainctlClient {
         rationale: &str,
         project: Option<&str>,
     ) -> Result<Value> {
-        let mut params = json!({ "title": title, "rationale": rationale });
+        let mut params = json!({
+            "agent_id": self.agent_id,
+            "title": title,
+            "rationale": rationale,
+        });
         if let Some(p) = project {
             params["project"] = json!(p);
         }
-        self.call("decision_add", params).await
+        self.call_tool("decision_add", params).await
     }
 
     pub async fn entity_create(
@@ -228,17 +282,25 @@ impl BrainctlClient {
         entity_type: &str,
         scope: Option<&str>,
     ) -> Result<Value> {
-        let mut params = json!({ "name": name, "entity_type": entity_type });
+        let mut params = json!({
+            "agent_id": self.agent_id,
+            "name": name,
+            "entity_type": entity_type,
+        });
         if let Some(s) = scope {
             params["scope"] = json!(s);
         }
-        self.call("entity_create", params).await
+        self.call_tool("entity_create", params).await
     }
 
-    pub async fn entity_observe(&self, entity_id: i64, observation: &str) -> Result<Value> {
-        self.call(
+    pub async fn entity_observe(&self, identifier: &str, observations: &str) -> Result<Value> {
+        self.call_tool(
             "entity_observe",
-            json!({ "entity_id": entity_id, "observation": observation }),
+            json!({
+                "agent_id": self.agent_id,
+                "identifier": identifier,
+                "observations": observations,
+            }),
         )
         .await
     }
@@ -249,23 +311,29 @@ impl BrainctlClient {
         name: &str,
         agent_type: Option<&str>,
     ) -> Result<Value> {
-        let mut params = json!({ "id": id, "name": name });
+        let mut params = json!({
+            "agent_id": self.agent_id,
+            "id": id,
+            "name": name,
+        });
         if let Some(t) = agent_type {
             params["type"] = json!(t);
         }
-        self.call("agent_register", params).await
+        self.call_tool("agent_register", params).await
     }
 
     pub async fn agent_wrap_up(
         &self,
-        agent_id: &str,
         summary: &str,
         goal: Option<&str>,
         open_loops: Option<&str>,
         next_step: Option<&str>,
         project: Option<&str>,
     ) -> Result<Value> {
-        let mut params = json!({ "agent_id": agent_id, "summary": summary });
+        let mut params = json!({
+            "agent_id": self.agent_id,
+            "summary": summary,
+        });
         if let Some(g) = goal {
             params["goal"] = json!(g);
         }
@@ -278,31 +346,33 @@ impl BrainctlClient {
         if let Some(p) = project {
             params["project"] = json!(p);
         }
-        self.call("agent_wrap_up", params).await
+        self.call_tool("agent_wrap_up", params).await
     }
 
     pub async fn agent_orient(
         &self,
-        agent_id: &str,
         project: Option<&str>,
         query: Option<&str>,
     ) -> Result<Value> {
-        let mut params = json!({ "agent_id": agent_id });
+        let mut params = json!({ "agent_id": self.agent_id });
         if let Some(p) = project {
             params["project"] = json!(p);
         }
         if let Some(q) = query {
             params["query"] = json!(q);
         }
-        self.call("agent_orient", params).await
+        self.call_tool("agent_orient", params).await
     }
 
     pub async fn memory_search(&self, query: &str, limit: Option<u32>) -> Result<Value> {
-        let mut params = json!({ "query": query });
+        let mut params = json!({
+            "agent_id": self.agent_id,
+            "query": query,
+        });
         if let Some(l) = limit {
             params["limit"] = json!(l);
         }
-        self.call("memory_search", params).await
+        self.call_tool("memory_search", params).await
     }
 }
 
@@ -316,6 +386,7 @@ mod tests {
         let client = BrainctlClient::new(
             PathBuf::from("/definitely/not/here/brainctl-mcp"),
             PathBuf::from("/tmp/test-brain.db"),
+            "test-agent",
         );
         let r = client.call("memory_add", json!({"content": "x", "category": "lesson"})).await;
         assert!(matches!(r, Err(AppError::BrainctlUnavailable { .. })));
@@ -340,6 +411,7 @@ sleep 1
         let client = BrainctlClient::new(
             tmp.path().to_path_buf(),
             PathBuf::from("/tmp/test-brain.db"),
+            "test-agent",
         );
         // The echo emits id=1 regardless; ensure our IdGen starts at 1 too (it does).
         let r = client.call("memory_add", json!({"content": "x"})).await;

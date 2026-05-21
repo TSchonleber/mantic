@@ -22,7 +22,7 @@ async fn memory_add_round_trip_against_real_binary() {
     let db_path = tmp.path().to_path_buf();
     drop(tmp); // we want only the path, brainctl creates the file itself
 
-    let client = BrainctlClient::new(bin, db_path.clone());
+    let client = BrainctlClient::new(bin, db_path.clone(), "integration-test-agent");
     let result = client
         .memory_add(
             "integration test entry",
@@ -36,8 +36,14 @@ async fn memory_add_round_trip_against_real_binary() {
     // We expect either Ok with a memory_id field OR a deterministic brainctl error.
     // The point of this test is to confirm spawn + handshake + request/response works
     // end-to-end. The exact response shape may evolve; we just check it didn't blow up.
+    //
+    // NOTE: brainctl-mcp does NOT auto-migrate brain.db on first launch. With a fresh
+    // empty file we currently see `{"error": "no such table: agents"}` in the body.
+    // That's a separate contract gap (DB bootstrap) — this test only confirms the
+    // spawn + MCP `tools/call` envelope + agent_id plumbing works end-to-end.
     match result {
         Ok(v) => {
+            eprintln!("brainctl-mcp memory_add response: {v}");
             assert!(
                 v.is_object() || v.is_null(),
                 "expected JSON object/null, got: {v}"

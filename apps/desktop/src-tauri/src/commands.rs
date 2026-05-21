@@ -104,11 +104,11 @@ pub async fn entity_create(
 
 #[tauri::command]
 pub async fn entity_observe(
-    entity_id: i64,
-    observation: String,
+    identifier: String,
+    observations: String,
     brainctl: State<'_, Arc<BrainctlClient>>,
 ) -> Result<Value> {
-    brainctl.entity_observe(entity_id, &observation).await
+    brainctl.entity_observe(&identifier, &observations).await
 }
 
 #[tauri::command]
@@ -125,7 +125,6 @@ pub async fn agent_register(
 
 #[tauri::command]
 pub async fn agent_wrap_up(
-    agent_id: String,
     summary: String,
     goal: Option<String>,
     open_loops: Option<String>,
@@ -135,7 +134,6 @@ pub async fn agent_wrap_up(
 ) -> Result<Value> {
     brainctl
         .agent_wrap_up(
-            &agent_id,
             &summary,
             goal.as_deref(),
             open_loops.as_deref(),
@@ -147,13 +145,12 @@ pub async fn agent_wrap_up(
 
 #[tauri::command]
 pub async fn agent_orient(
-    agent_id: String,
     project: Option<String>,
     query: Option<String>,
     brainctl: State<'_, Arc<BrainctlClient>>,
 ) -> Result<Value> {
     brainctl
-        .agent_orient(&agent_id, project.as_deref(), query.as_deref())
+        .agent_orient(project.as_deref(), query.as_deref())
         .await
 }
 

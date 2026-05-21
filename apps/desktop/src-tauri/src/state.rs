@@ -26,7 +26,11 @@ impl AppState {
             bootstrap_empty_brain(&brain_db_path)?;
             BrainDb::open_read_only(&brain_db_path)
         })?);
-        let brainctl = Arc::new(BrainctlClient::new(brainctl_binary, brain_db_path));
+        let brainctl = Arc::new(BrainctlClient::new(
+            brainctl_binary,
+            brain_db_path,
+            "mantic-desktop",
+        ));
         Ok(Self {
             keyring,
             brain,
