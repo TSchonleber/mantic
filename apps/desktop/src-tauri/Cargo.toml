@@ -29,6 +29,8 @@ keyring = "3"
 thiserror = "1"
 anyhow = "1"
 chrono = { version = "0.4", features = ["serde"] }
+rusqlite = { version = "0.32", features = ["bundled"] }
+async-trait = "0.1"
 
 [dev-dependencies]
 mockito = "1"
