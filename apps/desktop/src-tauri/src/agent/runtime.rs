@@ -34,6 +34,9 @@ impl AgentRuntime {
 
     pub async fn spawn(&self, config: AgentConfig) -> Result<AgentSummary> {
         config.validate()?;
+        // Best-effort persistence; we accept that brainctl may be unavailable
+        // during unit tests and proceed with in-memory state regardless.
+        let _ = self.persist_new_agent(&config).await;
         let llm = self.build_backend(&config)?;
         let agent = Agent::new(config.clone(), llm, self.executor.clone(), self.brainctl.clone());
         let agent_for_task = agent.clone();
@@ -161,6 +164,26 @@ impl AgentRuntime {
     /// Test-only access to the executor for unit tests + integration tests.
     #[cfg(any(test, feature = "test-helpers"))]
     pub fn executor(&self) -> Arc<PaperExecutor> { self.executor.clone() }
+}
+
+impl AgentRuntime {
+    async fn persist_new_agent(&self, config: &AgentConfig) -> Result<()> {
+        // Register the agent with brainctl's internal accounting.
+        let _ = self
+            .brainctl
+            .agent_register(&config.id, &config.name, Some("trading-agent"))
+            .await;
+
+        // Write the config blob as a memory in scope:agent:<id>.
+        let blob = serde_json::to_string(config)
+            .map_err(|e| AppError::LlmBackend(format!("config serialize: {e}")))?;
+        let scope = format!("agent:{}", config.id);
+        let _ = self
+            .brainctl
+            .memory_add(&blob, "convention", Some(&scope), Some("agent-config,v1"))
+            .await;
+        Ok(())
+    }
 }
 
 #[cfg(test)]
