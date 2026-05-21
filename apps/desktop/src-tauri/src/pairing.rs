@@ -24,10 +24,10 @@ pub async fn pair(server_url: &str, code: &str) -> Result<String> {
 
     let status = res.status();
     if !status.is_success() {
-        let body = res.text().await.unwrap_or_default();
         if status.as_u16() == 400 {
             return Err(AppError::InvalidCode);
         }
+        let body = res.text().await.unwrap_or_default();
         return Err(AppError::Server {
             status: status.as_u16(),
             body,
@@ -68,7 +68,7 @@ mod tests {
     #[tokio::test]
     async fn pair_maps_400_to_invalid_code() {
         let mut server = Server::new_async().await;
-        server
+        let m = server
             .mock("POST", "/v1/pair")
             .with_status(400)
             .with_body(r#"{"error":"invalid_code"}"#)
@@ -77,5 +77,6 @@ mod tests {
 
         let err = pair(&server.url(), "12").await.unwrap_err();
         assert!(matches!(err, AppError::InvalidCode));
+        m.assert_async().await;
     }
 }
