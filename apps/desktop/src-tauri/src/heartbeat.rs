@@ -1,6 +1,7 @@
 use crate::account::decode_claims;
 use crate::error::Result;
-use crate::{license, pairing};
+use crate::license::KeyringStore;
+use crate::pairing;
 use std::time::Duration;
 
 /// Returns true if the token expires within `refresh_window` seconds from now.
@@ -8,8 +9,12 @@ pub fn needs_refresh(expires_at: i64, now: i64, refresh_window_secs: i64) -> boo
     expires_at - now <= refresh_window_secs
 }
 
-pub async fn tick(server_url: &str, refresh_window_secs: i64) -> Result<bool> {
-    let token = match license::load() {
+pub async fn tick(
+    keyring: &KeyringStore,
+    server_url: &str,
+    refresh_window_secs: i64,
+) -> Result<bool> {
+    let token = match keyring.load() {
         Ok(t) => t,
         Err(_) => return Ok(false),
     };
@@ -23,13 +28,18 @@ pub async fn tick(server_url: &str, refresh_window_secs: i64) -> Result<bool> {
     }
     let new_token = pairing::refresh(server_url, &token).await?;
     decode_claims(&new_token)?;
-    license::save(&new_token)?;
+    keyring.save(&new_token)?;
     Ok(true)
 }
 
-pub async fn run_forever(server_url: String, interval: Duration, refresh_window_secs: i64) {
+pub async fn run_forever(
+    keyring: std::sync::Arc<KeyringStore>,
+    server_url: String,
+    interval: Duration,
+    refresh_window_secs: i64,
+) {
     loop {
-        let _ = tick(&server_url, refresh_window_secs).await;
+        let _ = tick(&keyring, &server_url, refresh_window_secs).await;
         tokio::time::sleep(interval).await;
     }
 }

@@ -5,14 +5,21 @@ mod heartbeat;
 mod license;
 mod pairing;
 
+use license::KeyringStore;
+use std::sync::Arc;
 use std::time::Duration;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let keyring = Arc::new(KeyringStore::new());
+
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .setup(|_app| {
+        .manage(keyring.clone())
+        .setup(move |_app| {
+            let keyring_for_task = keyring.clone();
             tauri::async_runtime::spawn(heartbeat::run_forever(
+                keyring_for_task,
                 commands::server_url(),
                 Duration::from_secs(60 * 5),
                 60 * 60 * 2,
