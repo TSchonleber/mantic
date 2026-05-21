@@ -11,7 +11,12 @@ function formatExpiry(unixSeconds: number): string {
 
 export default function Account({ account, onSignOut }: Props) {
   async function handleSignOut() {
-    await signOut();
+    try {
+      await signOut();
+    } catch {
+      // Keyring failure is non-recoverable from the UI; clear local state anyway
+      // so the user isn't stuck in a paired state they can't escape.
+    }
     onSignOut();
   }
 

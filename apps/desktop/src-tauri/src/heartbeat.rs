@@ -22,6 +22,7 @@ pub async fn tick(server_url: &str, refresh_window_secs: i64) -> Result<bool> {
         return Ok(false);
     }
     let new_token = pairing::refresh(server_url, &token).await?;
+    decode_claims(&new_token)?;
     license::save(&new_token)?;
     Ok(true)
 }
