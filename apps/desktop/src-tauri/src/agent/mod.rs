@@ -11,4 +11,4 @@ pub use agent::Agent;
 pub use config::{AgentConfig, AgentConfigInput, AgentDetails, AgentSummary};
 pub use signal::Signal;
 pub use state::AgentState;
-// AgentRuntime re-export comes in Task 11.
+pub use runtime::AgentRuntime;
