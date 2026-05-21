@@ -6,6 +6,13 @@ const KEY: &str = "license-jwt";
 
 fn entry() -> Result<&'static keyring::Entry> {
     static ENTRY: OnceLock<std::result::Result<keyring::Entry, keyring::Error>> = OnceLock::new();
+    #[cfg(test)]
+    {
+        static TEST_INIT: std::sync::Once = std::sync::Once::new();
+        TEST_INIT.call_once(|| {
+            keyring::set_default_credential_builder(keyring::mock::default_credential_builder());
+        });
+    }
     let cell = ENTRY.get_or_init(|| keyring::Entry::new(SERVICE, KEY));
     cell.as_ref().map_err(|e| AppError::Keyring(clone_keyring_error(e)))
 }
@@ -43,19 +50,10 @@ pub fn clear() -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use keyring::{mock, set_default_credential_builder};
-    use std::sync::Once;
-
-    static INIT: Once = Once::new();
-    fn init_mock_keyring() {
-        INIT.call_once(|| {
-            set_default_credential_builder(mock::default_credential_builder());
-        });
-    }
 
     fn reset() {
-        init_mock_keyring();
-        // Clear leftover state from previous tests since they share the static Entry.
+        // Force entry() to initialize (which installs the mock builder via TEST_INIT)
+        // and clear any leftover state from previous tests.
         let _ = clear();
     }
 
