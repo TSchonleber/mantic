@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import App from "./App";
 import { invoke } from "@tauri-apps/api/core";
@@ -34,7 +35,7 @@ describe("<App />", () => {
     });
   });
 
-  it("shows Account route when paired AND wallet connected", async () => {
+  it("shows Fleet route when paired and wallet connected", async () => {
     invokeMock.mockImplementation(async (cmd: string) => {
       if (cmd === "current_account") {
         return { account_id: "acct_x", tier: "pro", expires_at: Math.floor(Date.now() / 1000) + 3600 };
@@ -52,9 +53,40 @@ describe("<App />", () => {
           },
         };
       }
+      if (cmd === "agent_list") return [];
+      if (cmd === "recent_events") return [];
       throw new Error(`unexpected: ${cmd}`);
     });
     render(<MemoryRouter><App /></MemoryRouter>);
+    expect(await screen.findByRole("heading", { name: /Fleet/i })).toBeInTheDocument();
+  });
+
+  it("opens Account from Fleet header button", async () => {
+    invokeMock.mockImplementation(async (cmd: string) => {
+      if (cmd === "current_account") {
+        return { account_id: "acct_x", tier: "pro", expires_at: Math.floor(Date.now() / 1000) + 3600 };
+      }
+      if (cmd === "wallet_status") {
+        return {
+          session_pubkey_b58: "Sess",
+          master_pubkey_b58: "Mast",
+          authorization: {
+            master_pubkey_b58: "Mast",
+            session_pubkey_b58: "Sess",
+            message: "x",
+            signature_b58: "y",
+            signed_at: "2026-05-21T12:00:00Z",
+          },
+        };
+      }
+      if (cmd === "agent_list") return [];
+      if (cmd === "recent_events") return [];
+      throw new Error(`unexpected: ${cmd}`);
+    });
+    const user = userEvent.setup();
+    render(<MemoryRouter><App /></MemoryRouter>);
+    const accountBtn = await screen.findByRole("button", { name: /Account/i });
+    await user.click(accountBtn);
     await waitFor(() => {
       expect(screen.getByText(/acct_x/i)).toBeInTheDocument();
     });
