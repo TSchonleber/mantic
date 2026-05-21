@@ -86,7 +86,11 @@ export interface EventAddInput {
 }
 
 export function eventAdd(input: EventAddInput): Promise<unknown> {
-  return invoke("event_add", input);
+  return invoke("event_add", {
+    eventType: input.eventType,
+    content: input.content,
+    importance: input.importance,
+  });
 }
 
 export interface DecisionAddInput {
@@ -110,7 +114,11 @@ export interface EntityCreateInput {
 }
 
 export function entityCreate(input: EntityCreateInput): Promise<unknown> {
-  return invoke("entity_create", input);
+  return invoke("entity_create", {
+    name: input.name,
+    entityType: input.entityType,
+    scope: input.scope,
+  });
 }
 
 export interface EntityObserveInput {
@@ -119,7 +127,10 @@ export interface EntityObserveInput {
 }
 
 export function entityObserve(input: EntityObserveInput): Promise<unknown> {
-  return invoke("entity_observe", input);
+  return invoke("entity_observe", {
+    entityId: input.entityId,
+    observation: input.observation,
+  });
 }
 
 export interface AgentRegisterInput {
@@ -146,7 +157,14 @@ export interface AgentWrapUpInput {
 }
 
 export function agentWrapUp(input: AgentWrapUpInput): Promise<unknown> {
-  return invoke("agent_wrap_up", input);
+  return invoke("agent_wrap_up", {
+    agentId: input.agentId,
+    summary: input.summary,
+    goal: input.goal,
+    openLoops: input.openLoops,
+    nextStep: input.nextStep,
+    project: input.project,
+  });
 }
 
 // ---- Complex reads ----
@@ -158,7 +176,11 @@ export interface AgentOrientInput {
 }
 
 export function agentOrient(input: AgentOrientInput): Promise<unknown> {
-  return invoke("agent_orient", input);
+  return invoke("agent_orient", {
+    agentId: input.agentId,
+    project: input.project,
+    query: input.query,
+  });
 }
 
 export interface MemorySearchInput {
@@ -167,7 +189,10 @@ export interface MemorySearchInput {
 }
 
 export function memorySearch(input: MemorySearchInput): Promise<unknown> {
-  return invoke("memory_search", input);
+  return invoke("memory_search", {
+    query: input.query,
+    limit: input.limit,
+  });
 }
 
 // ---- Wallet ----
@@ -204,4 +229,87 @@ export function walletRevoke(): Promise<void> {
 
 export function walletSignMessage(message: Uint8Array): Promise<string> {
   return invoke<string>("wallet_sign_message", { message: Array.from(message) });
+}
+
+// ---- Agent runtime ----
+
+export type LlmBackendKind = "anthropic-direct" | "mantic-proxy";
+
+export interface AgentConfigInput {
+  name: string;
+  max_position_sol: number;
+  daily_loss_cap_sol: number;
+  nl_overlay: string;
+  strategy_template_id: string;
+  llm_backend: LlmBackendKind;
+  llm_model: string;
+  max_tokens: number;
+  temperature: number;
+}
+
+export interface AgentConfig extends AgentConfigInput {
+  id: string;
+}
+
+export type RunStep = "orienting" | "calling_llm" | "executing" | "logging";
+
+export type AgentState =
+  | { kind: "idle" }
+  | { kind: "armed" }
+  | { kind: "running"; step: RunStep }
+  | { kind: "paused" }
+  | { kind: "error"; reason: string };
+
+export interface AgentSummary {
+  id: string;
+  name: string;
+  state: AgentState;
+  has_llm_key: boolean;
+}
+
+export interface AgentDetails {
+  config: AgentConfig;
+  state: AgentState;
+  has_llm_key: boolean;
+  open_position_ids: string[];
+}
+
+export interface Signal {
+  id: string;
+  token_symbol: string;
+  source: string;
+  context_tags: string[];
+  payload: unknown;
+}
+
+export function agentCreate(config: AgentConfigInput): Promise<AgentSummary> {
+  return invoke<AgentSummary>("agent_create", { config });
+}
+
+export function agentList(): Promise<AgentSummary[]> {
+  return invoke<AgentSummary[]>("agent_list");
+}
+
+export function agentGet(id: string): Promise<AgentDetails> {
+  return invoke<AgentDetails>("agent_get", { id });
+}
+
+export function agentArm(id: string): Promise<AgentSummary> {
+  return invoke<AgentSummary>("agent_arm", { id });
+}
+
+export function agentPause(id: string): Promise<AgentSummary> {
+  return invoke<AgentSummary>("agent_pause", { id });
+}
+
+export function agentKill(id: string): Promise<void> {
+  return invoke<void>("agent_kill", { id });
+}
+
+export function agentFireTestSignal(id: string, signal: Signal): Promise<void> {
+  return invoke<void>("agent_fire_test_signal", { id, signal });
+}
+
+export function agentSetLlmKey(id: string, apiKey: string): Promise<void> {
+  return invoke<void>("agent_set_llm_key", { id, apiKey });
 }

@@ -10,6 +10,7 @@
     "build:wallet-bridge": "pnpm --filter wallet-bridge build",
     "test": "pnpm -r test",
     "test:e2e": "pnpm --filter mantic-e2e test",
+    "test:smoke": "pnpm --filter mantic-desktop-smoke test",
     "lint": "pnpm -r lint"
   },
   "packageManager": "pnpm@10.30.1",

@@ -1,4 +1,5 @@
 mod account;
+pub mod agent;
 mod brain_db;
 pub mod brainctl_client;
 mod bundle;
@@ -44,6 +45,12 @@ pub fn run() {
             app.manage(state.brain.clone());
             app.manage(state.brainctl.clone());
             app.manage(state.wallet.clone());
+            app.manage(state.agent_runtime.clone());
+
+            let runtime_for_seed = state.agent_runtime.clone();
+            tauri::async_runtime::spawn(async move {
+                seed_default_agent_if_empty(runtime_for_seed).await;
+            });
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -66,7 +73,34 @@ pub fn run() {
             commands::wallet_status,
             commands::wallet_revoke,
             commands::wallet_sign_message,
+            commands::agent_create,
+            commands::agent_list,
+            commands::agent_get,
+            commands::agent_arm,
+            commands::agent_pause,
+            commands::agent_kill,
+            commands::agent_fire_test_signal,
+            commands::agent_set_llm_key,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+async fn seed_default_agent_if_empty(runtime: std::sync::Arc<agent::AgentRuntime>) {
+    if !runtime.list().await.is_empty() {
+        return;
+    }
+    let cfg = agent::AgentConfig {
+        id: agent::signal::short_id(),
+        name: "Default Paper Agent".to_string(),
+        max_position_sol: 0.5,
+        daily_loss_cap_sol: 2.0,
+        nl_overlay: String::new(),
+        strategy_template_id: "mock".to_string(),
+        llm_backend: agent::config::LlmBackendKind::AnthropicDirect,
+        llm_model: "claude-sonnet-4-6".to_string(),
+        max_tokens: 1024,
+        temperature: 0.0,
+    };
+    let _ = runtime.spawn(cfg).await;
 }
