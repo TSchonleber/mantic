@@ -66,11 +66,41 @@ trading wallet — you fund it manually from your master wallet, and Mantic has
 full control over its contents. To stop trading, just drain the session wallet
 back to your master.
 
+## Agent Runtime
+
+Mantic includes a paper-trading agent runtime that drives an LLM decision loop.
+On first launch, the desktop app seeds a `Default Paper Agent`. To exercise the
+loop end to end:
+
+1. Open Fleet after pairing and wallet connect.
+2. Create an agent with a name, max position size, behavior notes, and an
+   Anthropic API key.
+3. Arm the agent.
+4. Fire a test signal.
+5. Watch the live tape for decision and trade events.
+
+### LLM backends
+
+- `anthropic-direct` uses a bring-your-own Anthropic API key stored in the OS
+  keychain at `agent-llm-anthropic-key-<agent-id>`.
+- `mantic-proxy` is reserved for the hosted proxy and currently returns a
+  not-available error.
+
+### Brain persistence
+
+The runtime logs agent registration and config snapshots through brainctl.
+Decisions are recorded with `decision_add`, trades with
+`event_add(event_type="result")`, skips with
+`event_add(event_type="observation")`, and reasoning chains with
+`event_add(event_type="decision")`.
+
 ## Tests
 
 ```bash
-pnpm -r test                                            # 6 mock-license + 34 desktop frontend + 2 e2e
-cd apps/desktop/src-tauri && cargo test                 # 44 Rust unit tests + 2 integration
+pnpm -r test                                            # workspace unit tests
+cd apps/desktop/src-tauri && cargo test                 # Rust unit + integration tests
+pnpm --filter mantic-desktop lint                       # desktop TypeScript typecheck
+pnpm test:smoke                                         # Vite-only Playwright smoke
 pnpm --filter mantic-e2e test                           # binary smoke (requires release build)
 ```
 
