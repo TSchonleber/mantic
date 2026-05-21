@@ -46,6 +46,11 @@ pub fn run() {
             app.manage(state.brainctl.clone());
             app.manage(state.wallet.clone());
             app.manage(state.agent_runtime.clone());
+
+            let runtime_for_seed = state.agent_runtime.clone();
+            tauri::async_runtime::spawn(async move {
+                seed_default_agent_if_empty(runtime_for_seed).await;
+            });
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -79,4 +84,24 @@ pub fn run() {
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+async fn seed_default_agent_if_empty(runtime: std::sync::Arc<agent::AgentRuntime>) {
+    if !runtime.list().await.is_empty() {
+        return;
+    }
+    let id = agent::signal::short_id();
+    let cfg = agent::AgentConfig {
+        id,
+        name: "Default Paper Agent".to_string(),
+        max_position_sol: 0.5,
+        daily_loss_cap_sol: 2.0,
+        nl_overlay: String::new(),
+        strategy_template_id: "mock".to_string(),
+        llm_backend: agent::config::LlmBackendKind::AnthropicDirect,
+        llm_model: "claude-sonnet-4-6".to_string(),
+        max_tokens: 1024,
+        temperature: 0.0,
+    };
+    let _ = runtime.spawn(cfg).await;
 }
