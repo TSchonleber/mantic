@@ -55,6 +55,21 @@ pub enum AppError {
 
     #[error("bs58 decode error: {0}")]
     Bs58(#[from] bs58::decode::Error),
+
+    #[error("agent not found: {0}")]
+    AgentNotFound(String),
+
+    #[error("agent invalid state: {0}")]
+    AgentInvalidState(String),
+
+    #[error("llm backend error: {0}")]
+    LlmBackend(String),
+
+    #[error("Mantic proxy is not available yet")]
+    LlmProxyNotAvailable,
+
+    #[error("paper executor error: {0}")]
+    PaperExecutor(String),
 }
 
 impl serde::Serialize for AppError {
