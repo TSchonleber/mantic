@@ -11,8 +11,9 @@ fn server_url() -> String {
 #[tauri::command]
 pub async fn pair_with_code(code: String) -> Result<AccountInfo> {
     let token = pairing::pair(&server_url(), &code).await?;
+    let info = decode_claims(&token)?;
     license::save(&token)?;
-    decode_claims(&token)
+    Ok(info)
 }
 
 #[tauri::command]
