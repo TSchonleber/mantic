@@ -8,26 +8,41 @@ mod heartbeat;
 mod license;
 mod mcp_codec;
 mod pairing;
+mod state;
 
-use license::KeyringStore;
+use state::AppState;
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
+use tauri::Manager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let keyring = Arc::new(KeyringStore::new());
-
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .manage(keyring.clone())
-        .setup(move |_app| {
-            let keyring_for_task = keyring.clone();
+        .setup(move |app| {
+            let app_data = app.path().app_data_dir().expect("app data dir");
+            let brain_path = app_data.join("mantic").join("brain.db");
+
+            let brainctl_binary = bundle::brainctl_mcp_path(&app.handle())
+                .unwrap_or_else(|_| PathBuf::from("brainctl-mcp"));
+
+            let state = AppState::new(brain_path, brainctl_binary)
+                .expect("failed to build app state");
+
+            // Heartbeat task
+            let keyring_for_task = state.keyring.clone();
             tauri::async_runtime::spawn(heartbeat::run_forever(
                 keyring_for_task,
                 commands::server_url(),
                 Duration::from_secs(60 * 5),
                 60 * 60 * 2,
             ));
+
+            // Register individual Arcs so commands can take State<'_, Arc<KeyringStore>>, etc.
+            app.manage(state.keyring.clone());
+            app.manage(state.brain.clone());
+            app.manage(state.brainctl.clone());
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
