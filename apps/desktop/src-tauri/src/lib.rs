@@ -9,7 +9,7 @@ mod license;
 mod mcp_codec;
 mod pairing;
 mod state;
-mod wallet;
+pub mod wallet;
 
 use state::AppState;
 use std::path::PathBuf;
