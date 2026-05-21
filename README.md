@@ -45,11 +45,32 @@ pnpm dev:desktop
 
 Use any 4+ character pairing code on first launch.
 
+## Wallet connect (Solana)
+
+Mantic uses a localhost web bridge to connect to Phantom or Solflare. The bridge ships
+as a single-file HTML asset built from `apps/wallet-bridge/`. Build it locally:
+
+```bash
+pnpm --filter wallet-bridge build
+```
+
+The Rust build step (`build.rs`) copies the result into Tauri resources at compile
+time. If `tauri dev` warns about a missing wallet-bridge bundle, run the build
+command above and re-run.
+
+### Wallet model
+
+Mantic generates a Solana ed25519 session keypair locally. You authorize it by
+signing an off-chain message in Phantom (or Solflare). The session wallet is the
+trading wallet — you fund it manually from your master wallet, and Mantic has
+full control over its contents. To stop trading, just drain the session wallet
+back to your master.
+
 ## Tests
 
 ```bash
-pnpm -r test                                            # 28 frontend + service tests
-cd apps/desktop/src-tauri && cargo test                 # 25 Rust unit tests + 1 integration
+pnpm -r test                                            # 6 mock-license + 34 desktop frontend + 2 e2e
+cd apps/desktop/src-tauri && cargo test                 # 44 Rust unit tests + 2 integration
 pnpm --filter mantic-e2e test                           # binary smoke (requires release build)
 ```
 

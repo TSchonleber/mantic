@@ -34,6 +34,27 @@ pub enum AppError {
 
     #[error("brainctl unavailable: {reason}")]
     BrainctlUnavailable { reason: String },
+
+    #[error("wallet not connected")]
+    WalletNotConnected,
+
+    #[error("wallet connect already in progress")]
+    WalletConnectInProgress,
+
+    #[error("wallet connection timeout")]
+    WalletConnectionTimeout,
+
+    #[error("wallet signature verification failed")]
+    WalletInvalidSignature,
+
+    #[error("wallet nonce mismatch")]
+    WalletNonceMismatch,
+
+    #[error("wallet bridge error: {0}")]
+    WalletBridge(String),
+
+    #[error("bs58 decode error: {0}")]
+    Bs58(#[from] bs58::decode::Error),
 }
 
 impl serde::Serialize for AppError {

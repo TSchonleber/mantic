@@ -2,6 +2,7 @@ use crate::brain_db::BrainDb;
 use crate::brainctl_client::BrainctlClient;
 use crate::license::KeyringStore;
 use crate::error::{AppError, Result};
+use crate::wallet::WalletStore;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -10,6 +11,7 @@ pub struct AppState {
     pub keyring: Arc<KeyringStore>,
     pub brain: Arc<BrainDb>,
     pub brainctl: Arc<BrainctlClient>,
+    pub wallet: Arc<WalletStore>,
 }
 
 impl AppState {
@@ -31,10 +33,12 @@ impl AppState {
             brain_db_path,
             "mantic-desktop",
         ));
+        let wallet = Arc::new(WalletStore::new());
         Ok(Self {
             keyring,
             brain,
             brainctl,
+            wallet,
         })
     }
 }

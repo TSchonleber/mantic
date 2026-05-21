@@ -9,6 +9,7 @@ mod license;
 mod mcp_codec;
 mod pairing;
 mod state;
+pub mod wallet;
 
 use state::AppState;
 use std::path::PathBuf;
@@ -42,6 +43,7 @@ pub fn run() {
             app.manage(state.keyring.clone());
             app.manage(state.brain.clone());
             app.manage(state.brainctl.clone());
+            app.manage(state.wallet.clone());
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -60,6 +62,10 @@ pub fn run() {
             commands::agent_wrap_up,
             commands::agent_orient,
             commands::memory_search,
+            commands::wallet_connect,
+            commands::wallet_status,
+            commands::wallet_revoke,
+            commands::wallet_sign_message,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

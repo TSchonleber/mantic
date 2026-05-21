@@ -169,3 +169,39 @@ export interface MemorySearchInput {
 export function memorySearch(input: MemorySearchInput): Promise<unknown> {
   return invoke("memory_search", input);
 }
+
+// ---- Wallet ----
+
+export interface WalletConnectStarted {
+  url: string;
+}
+
+export interface StoredAuthorization {
+  master_pubkey_b58: string;
+  session_pubkey_b58: string;
+  message: string;
+  signature_b58: string;
+  signed_at: string;
+}
+
+export interface WalletCredentials {
+  session_pubkey_b58: string;
+  master_pubkey_b58: string;
+  authorization: StoredAuthorization;
+}
+
+export function walletConnect(): Promise<WalletConnectStarted> {
+  return invoke<WalletConnectStarted>("wallet_connect");
+}
+
+export function walletStatus(): Promise<WalletCredentials | null> {
+  return invoke<WalletCredentials | null>("wallet_status");
+}
+
+export function walletRevoke(): Promise<void> {
+  return invoke<void>("wallet_revoke");
+}
+
+export function walletSignMessage(message: Uint8Array): Promise<string> {
+  return invoke<string>("wallet_sign_message", { message: Array.from(message) });
+}
