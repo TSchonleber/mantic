@@ -1,9 +1,9 @@
 mod account;
 mod brain_db;
-mod brainctl_client;
+pub mod brainctl_client;
 mod bundle;
 mod commands;
-mod error;
+pub mod error;
 mod heartbeat;
 mod license;
 mod mcp_codec;
