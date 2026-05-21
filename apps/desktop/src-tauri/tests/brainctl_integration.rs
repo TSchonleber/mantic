@@ -33,20 +33,28 @@ async fn memory_add_round_trip_against_real_binary() {
         .await;
     client.shutdown().await;
 
-    // We expect either Ok with a memory_id field OR a deterministic brainctl error.
-    // The point of this test is to confirm spawn + handshake + request/response works
-    // end-to-end. The exact response shape may evolve; we just check it didn't blow up.
-    //
-    // NOTE: brainctl-mcp does NOT auto-migrate brain.db on first launch. With a fresh
-    // empty file we currently see `{"error": "no such table: agents"}` in the body.
-    // That's a separate contract gap (DB bootstrap) — this test only confirms the
-    // spawn + MCP `tools/call` envelope + agent_id plumbing works end-to-end.
+    // brainctl-mcp auto-migrates a fresh brain.db on startup (see
+    // _ensure_db_initialized in agentmemory/mcp_server.py), so an empty
+    // path passed by Mantic is expected to come back with a real
+    // memory_id, not a `no such table: agents` error.
     match result {
         Ok(v) => {
             eprintln!("brainctl-mcp memory_add response: {v}");
+            let obj = v
+                .as_object()
+                .unwrap_or_else(|| panic!("expected JSON object, got: {v}"));
             assert!(
-                v.is_object() || v.is_null(),
-                "expected JSON object/null, got: {v}"
+                obj.get("error").is_none(),
+                "brainctl-mcp returned an error after migrate fix: {v}"
+            );
+            assert!(
+                obj.get("memory_id").and_then(|m| m.as_i64()).is_some(),
+                "expected numeric memory_id in response, got: {v}"
+            );
+            assert_eq!(
+                obj.get("ok").and_then(|b| b.as_bool()),
+                Some(true),
+                "expected ok=true in response, got: {v}"
             );
         }
         Err(e) => panic!("brainctl-mcp memory_add failed: {e}"),
