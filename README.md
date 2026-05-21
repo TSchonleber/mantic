@@ -66,4 +66,4 @@ pnpm build:desktop
 
 ## License
 
-TBD before public release.
+Apache License 2.0. See [LICENSE](./LICENSE).

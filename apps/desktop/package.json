@@ -3,6 +3,12 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "license": "Apache-2.0",
+  "author": "Terrence Schonleber",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tschonleber/mantic.git"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
