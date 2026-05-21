@@ -15,6 +15,12 @@ import {
   agentOrient,
   memorySearch,
 } from "./tauri-bridge";
+import {
+  walletConnect,
+  walletStatus,
+  walletRevoke,
+  walletSignMessage,
+} from "./tauri-bridge";
 
 const invokeMock = vi.mocked(invoke);
 
@@ -194,5 +200,44 @@ describe("eventAdd and remaining bridges", () => {
       nextStep: "next",
       project: "mantic",
     });
+  });
+});
+
+describe("wallet bridge", () => {
+  it("walletConnect invokes wallet_connect and returns the bridge URL", async () => {
+    invokeMock.mockResolvedValueOnce({ url: "http://127.0.0.1:18421/connect?nonce=abc" });
+    const r = await walletConnect();
+    expect(invokeMock).toHaveBeenCalledWith("wallet_connect");
+    expect(r.url).toContain("127.0.0.1");
+  });
+
+  it("walletStatus returns null when not connected", async () => {
+    invokeMock.mockResolvedValueOnce(null);
+    const r = await walletStatus();
+    expect(invokeMock).toHaveBeenCalledWith("wallet_status");
+    expect(r).toBeNull();
+  });
+
+  it("walletStatus returns credentials when connected", async () => {
+    invokeMock.mockResolvedValueOnce({
+      session_pubkey_b58: "Sess111",
+      master_pubkey_b58: "Master222",
+      authorization: { message: "x", signature_b58: "y", signed_at: "2026-05-21T12:00:00Z", master_pubkey_b58: "Master222", session_pubkey_b58: "Sess111" },
+    });
+    const r = await walletStatus();
+    expect(r?.session_pubkey_b58).toBe("Sess111");
+  });
+
+  it("walletRevoke invokes wallet_revoke", async () => {
+    invokeMock.mockResolvedValueOnce(undefined);
+    await walletRevoke();
+    expect(invokeMock).toHaveBeenCalledWith("wallet_revoke");
+  });
+
+  it("walletSignMessage passes message bytes and returns signature", async () => {
+    invokeMock.mockResolvedValueOnce("signatureBase58Result");
+    const sig = await walletSignMessage(new Uint8Array([1, 2, 3]));
+    expect(invokeMock).toHaveBeenCalledWith("wallet_sign_message", { message: [1, 2, 3] });
+    expect(sig).toBe("signatureBase58Result");
   });
 });
