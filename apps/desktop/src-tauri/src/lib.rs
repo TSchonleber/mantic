@@ -3,6 +3,7 @@ mod commands;
 mod error;
 mod heartbeat;
 mod license;
+mod mcp_codec;
 mod pairing;
 
 use license::KeyringStore;
