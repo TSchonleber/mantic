@@ -95,7 +95,6 @@ impl BrainDb {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::fs;
     use tempfile::NamedTempFile;
 
     /// Build a minimal fixture brain.db with the columns BrainDb reads.

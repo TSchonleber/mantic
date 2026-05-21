@@ -12,7 +12,6 @@ mod state;
 
 use state::AppState;
 use std::path::PathBuf;
-use std::sync::Arc;
 use std::time::Duration;
 use tauri::Manager;
 
