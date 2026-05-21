@@ -1,0 +1,15 @@
+{
+  "name": "mantic",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Mantic — brainctl-powered trading agent platform",
+  "scripts": {
+    "dev:mock-license": "pnpm --filter mock-license dev",
+    "dev:desktop": "pnpm --filter mantic-desktop tauri dev",
+    "build:desktop": "pnpm --filter mantic-desktop tauri build",
+    "test": "pnpm -r test",
+    "lint": "pnpm -r lint"
+  },
+  "packageManager": "pnpm@9.12.0",
+  "engines": { "node": ">=20" }
+}

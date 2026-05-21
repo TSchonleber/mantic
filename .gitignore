@@ -1,0 +1,26 @@
+# Node
+node_modules/
+.pnpm-store/
+dist/
+*.log
+
+# Rust / Tauri
+target/
+**/Cargo.lock.bak
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Env
+.env
+.env.local
+
+# Playwright
+test-results/
+playwright-report/
