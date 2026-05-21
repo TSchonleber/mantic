@@ -205,3 +205,86 @@ export function walletRevoke(): Promise<void> {
 export function walletSignMessage(message: Uint8Array): Promise<string> {
   return invoke<string>("wallet_sign_message", { message: Array.from(message) });
 }
+
+// ---- Agent runtime ----
+
+export type LlmBackendKind = "anthropic-direct" | "mantic-proxy";
+
+export interface AgentConfigInput {
+  name: string;
+  max_position_sol: number;
+  daily_loss_cap_sol: number;
+  nl_overlay: string;
+  strategy_template_id: string;
+  llm_backend: LlmBackendKind;
+  llm_model: string;
+  max_tokens: number;
+  temperature: number;
+}
+
+export interface AgentConfig extends AgentConfigInput {
+  id: string;
+}
+
+export type RunStep = "orienting" | "calling_llm" | "executing" | "logging";
+
+export type AgentState =
+  | { kind: "idle" }
+  | { kind: "armed" }
+  | { kind: "running"; step: RunStep }
+  | { kind: "paused" }
+  | { kind: "error"; reason: string };
+
+export interface AgentSummary {
+  id: string;
+  name: string;
+  state: AgentState;
+  has_llm_key: boolean;
+}
+
+export interface AgentDetails {
+  config: AgentConfig;
+  state: AgentState;
+  has_llm_key: boolean;
+  open_position_ids: string[];
+}
+
+export interface Signal {
+  id: string;
+  token_symbol: string;
+  source: string;
+  context_tags: string[];
+  payload: unknown;
+}
+
+export function agentCreate(config: AgentConfigInput): Promise<AgentSummary> {
+  return invoke<AgentSummary>("agent_create", { config });
+}
+
+export function agentList(): Promise<AgentSummary[]> {
+  return invoke<AgentSummary[]>("agent_list");
+}
+
+export function agentGet(id: string): Promise<AgentDetails> {
+  return invoke<AgentDetails>("agent_get", { id });
+}
+
+export function agentArm(id: string): Promise<AgentSummary> {
+  return invoke<AgentSummary>("agent_arm", { id });
+}
+
+export function agentPause(id: string): Promise<AgentSummary> {
+  return invoke<AgentSummary>("agent_pause", { id });
+}
+
+export function agentKill(id: string): Promise<void> {
+  return invoke<void>("agent_kill", { id });
+}
+
+export function agentFireTestSignal(id: string, signal: Signal): Promise<void> {
+  return invoke<void>("agent_fire_test_signal", { id, signal });
+}
+
+export function agentSetLlmKey(id: string, apiKey: string): Promise<void> {
+  return invoke<void>("agent_set_llm_key", { id, apiKey });
+}
