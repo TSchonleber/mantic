@@ -7,7 +7,8 @@ pub mod runtime;
 pub mod signal;
 pub mod state;
 
+pub use agent::Agent;
 pub use config::{AgentConfig, AgentConfigInput, AgentDetails, AgentSummary};
 pub use signal::Signal;
 pub use state::AgentState;
-// Agent and AgentRuntime re-exports come in Tasks 10 & 11.
+// AgentRuntime re-export comes in Task 11.
