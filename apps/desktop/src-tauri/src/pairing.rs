@@ -38,6 +38,26 @@ pub async fn pair(server_url: &str, code: &str) -> Result<String> {
     Ok(body.token)
 }
 
+pub async fn refresh(server_url: &str, current_token: &str) -> Result<String> {
+    let client = reqwest::Client::new();
+    let res = client
+        .post(format!("{server_url}/v1/refresh"))
+        .bearer_auth(current_token)
+        .send()
+        .await?;
+
+    let status = res.status();
+    if !status.is_success() {
+        let body = res.text().await.unwrap_or_default();
+        return Err(AppError::Server {
+            status: status.as_u16(),
+            body,
+        });
+    }
+    let body: PairResponse = res.json().await?;
+    Ok(body.token)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -77,6 +97,37 @@ mod tests {
 
         let err = pair(&server.url(), "12").await.unwrap_err();
         assert!(matches!(err, AppError::InvalidCode));
+        m.assert_async().await;
+    }
+
+    #[tokio::test]
+    async fn refresh_returns_new_token() {
+        let mut server = Server::new_async().await;
+        let m = server
+            .mock("POST", "/v1/refresh")
+            .match_header("authorization", "Bearer old.token.value")
+            .with_status(200)
+            .with_body(r#"{"token":"new.token.value"}"#)
+            .create_async()
+            .await;
+
+        let new_token = refresh(&server.url(), "old.token.value").await.unwrap();
+        assert_eq!(new_token, "new.token.value");
+        m.assert_async().await;
+    }
+
+    #[tokio::test]
+    async fn refresh_returns_server_error_on_401() {
+        let mut server = Server::new_async().await;
+        let m = server
+            .mock("POST", "/v1/refresh")
+            .with_status(401)
+            .with_body(r#"{"error":"invalid_token"}"#)
+            .create_async()
+            .await;
+
+        let err = refresh(&server.url(), "expired").await.unwrap_err();
+        assert!(matches!(err, AppError::Server { status: 401, .. }));
         m.assert_async().await;
     }
 }
