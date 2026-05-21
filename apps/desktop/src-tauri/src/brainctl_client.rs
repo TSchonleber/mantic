@@ -178,6 +178,132 @@ impl BrainctlClient {
             let _ = tokio::time::timeout(Duration::from_secs(2), state.child.wait()).await;
         }
     }
+
+    pub async fn memory_add(
+        &self,
+        content: &str,
+        category: &str,
+        scope: Option<&str>,
+        tags: Option<&str>,
+    ) -> Result<Value> {
+        let mut params = json!({ "content": content, "category": category });
+        if let Some(s) = scope {
+            params["scope"] = json!(s);
+        }
+        if let Some(t) = tags {
+            params["tags"] = json!(t);
+        }
+        self.call("memory_add", params).await
+    }
+
+    pub async fn event_add(
+        &self,
+        event_type: &str,
+        content: &str,
+        importance: Option<f64>,
+    ) -> Result<Value> {
+        let mut params = json!({ "event_type": event_type, "content": content });
+        if let Some(i) = importance {
+            params["importance"] = json!(i);
+        }
+        self.call("event_add", params).await
+    }
+
+    pub async fn decision_add(
+        &self,
+        title: &str,
+        rationale: &str,
+        project: Option<&str>,
+    ) -> Result<Value> {
+        let mut params = json!({ "title": title, "rationale": rationale });
+        if let Some(p) = project {
+            params["project"] = json!(p);
+        }
+        self.call("decision_add", params).await
+    }
+
+    pub async fn entity_create(
+        &self,
+        name: &str,
+        entity_type: &str,
+        scope: Option<&str>,
+    ) -> Result<Value> {
+        let mut params = json!({ "name": name, "entity_type": entity_type });
+        if let Some(s) = scope {
+            params["scope"] = json!(s);
+        }
+        self.call("entity_create", params).await
+    }
+
+    pub async fn entity_observe(&self, entity_id: i64, observation: &str) -> Result<Value> {
+        self.call(
+            "entity_observe",
+            json!({ "entity_id": entity_id, "observation": observation }),
+        )
+        .await
+    }
+
+    pub async fn agent_register(
+        &self,
+        id: &str,
+        name: &str,
+        agent_type: Option<&str>,
+    ) -> Result<Value> {
+        let mut params = json!({ "id": id, "name": name });
+        if let Some(t) = agent_type {
+            params["type"] = json!(t);
+        }
+        self.call("agent_register", params).await
+    }
+
+    pub async fn agent_wrap_up(
+        &self,
+        agent_id: &str,
+        summary: &str,
+        goal: Option<&str>,
+        open_loops: Option<&str>,
+        next_step: Option<&str>,
+        project: Option<&str>,
+    ) -> Result<Value> {
+        let mut params = json!({ "agent_id": agent_id, "summary": summary });
+        if let Some(g) = goal {
+            params["goal"] = json!(g);
+        }
+        if let Some(o) = open_loops {
+            params["open_loops"] = json!(o);
+        }
+        if let Some(n) = next_step {
+            params["next_step"] = json!(n);
+        }
+        if let Some(p) = project {
+            params["project"] = json!(p);
+        }
+        self.call("agent_wrap_up", params).await
+    }
+
+    pub async fn agent_orient(
+        &self,
+        agent_id: &str,
+        project: Option<&str>,
+        query: Option<&str>,
+    ) -> Result<Value> {
+        let mut params = json!({ "agent_id": agent_id });
+        if let Some(p) = project {
+            params["project"] = json!(p);
+        }
+        if let Some(q) = query {
+            params["query"] = json!(q);
+        }
+        self.call("agent_orient", params).await
+    }
+
+    pub async fn memory_search(&self, query: &str, limit: Option<u32>) -> Result<Value> {
+        let mut params = json!({ "query": query });
+        if let Some(l) = limit {
+            params["limit"] = json!(l);
+        }
+        self.call("memory_search", params).await
+    }
 }
 
 #[cfg(test)]
