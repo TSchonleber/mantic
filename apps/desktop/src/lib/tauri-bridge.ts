@@ -25,3 +25,147 @@ export async function currentAccount(): Promise<AccountInfo | null> {
 export async function signOut(): Promise<void> {
   await invoke("sign_out");
 }
+
+// ---- Brain types ----
+
+export interface BrainStatus {
+  memory_count: number;
+  event_count: number;
+}
+
+export interface EventSummary {
+  id: number;
+  event_type: string;
+  content: string;
+  created_at: number;
+}
+
+export interface MemorySummary {
+  id: number;
+  category: string;
+  content: string;
+  created_at: number;
+}
+
+// ---- Reads ----
+
+export function brainStatus(): Promise<BrainStatus> {
+  return invoke<BrainStatus>("brain_status");
+}
+
+export function recentEvents(limit: number): Promise<EventSummary[]> {
+  return invoke<EventSummary[]>("recent_events", { limit });
+}
+
+export function recentMemories(limit: number): Promise<MemorySummary[]> {
+  return invoke<MemorySummary[]>("recent_memories", { limit });
+}
+
+// ---- Writes ----
+
+export interface MemoryAddInput {
+  content: string;
+  category: string;
+  scope?: string;
+  tags?: string;
+}
+
+export function memoryAdd(input: MemoryAddInput): Promise<unknown> {
+  return invoke("memory_add", {
+    content: input.content,
+    category: input.category,
+    scope: input.scope,
+    tags: input.tags,
+  });
+}
+
+export interface EventAddInput {
+  eventType: string;
+  content: string;
+  importance?: number;
+}
+
+export function eventAdd(input: EventAddInput): Promise<unknown> {
+  return invoke("event_add", input);
+}
+
+export interface DecisionAddInput {
+  title: string;
+  rationale: string;
+  project?: string;
+}
+
+export function decisionAdd(input: DecisionAddInput): Promise<unknown> {
+  return invoke("decision_add", {
+    title: input.title,
+    rationale: input.rationale,
+    project: input.project,
+  });
+}
+
+export interface EntityCreateInput {
+  name: string;
+  entityType: string;
+  scope?: string;
+}
+
+export function entityCreate(input: EntityCreateInput): Promise<unknown> {
+  return invoke("entity_create", input);
+}
+
+export interface EntityObserveInput {
+  entityId: number;
+  observation: string;
+}
+
+export function entityObserve(input: EntityObserveInput): Promise<unknown> {
+  return invoke("entity_observe", input);
+}
+
+export interface AgentRegisterInput {
+  id: string;
+  name: string;
+  agentType?: string;
+}
+
+export function agentRegister(input: AgentRegisterInput): Promise<unknown> {
+  return invoke("agent_register", {
+    id: input.id,
+    name: input.name,
+    agentType: input.agentType,
+  });
+}
+
+export interface AgentWrapUpInput {
+  agentId: string;
+  summary: string;
+  goal?: string;
+  openLoops?: string;
+  nextStep?: string;
+  project?: string;
+}
+
+export function agentWrapUp(input: AgentWrapUpInput): Promise<unknown> {
+  return invoke("agent_wrap_up", input);
+}
+
+// ---- Complex reads ----
+
+export interface AgentOrientInput {
+  agentId: string;
+  project?: string;
+  query?: string;
+}
+
+export function agentOrient(input: AgentOrientInput): Promise<unknown> {
+  return invoke("agent_orient", input);
+}
+
+export interface MemorySearchInput {
+  query: string;
+  limit?: number;
+}
+
+export function memorySearch(input: MemorySearchInput): Promise<unknown> {
+  return invoke("memory_search", input);
+}
