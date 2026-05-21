@@ -45,6 +45,7 @@ pub fn run() {
             app.manage(state.brain.clone());
             app.manage(state.brainctl.clone());
             app.manage(state.wallet.clone());
+            app.manage(state.agent_runtime.clone());
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -67,6 +68,14 @@ pub fn run() {
             commands::wallet_status,
             commands::wallet_revoke,
             commands::wallet_sign_message,
+            commands::agent_create,
+            commands::agent_list,
+            commands::agent_get,
+            commands::agent_arm,
+            commands::agent_pause,
+            commands::agent_kill,
+            commands::agent_fire_test_signal,
+            commands::agent_set_llm_key,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

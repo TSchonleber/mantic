@@ -1,3 +1,4 @@
+use crate::agent::AgentRuntime;
 use crate::brain_db::BrainDb;
 use crate::brainctl_client::BrainctlClient;
 use crate::license::KeyringStore;
@@ -12,6 +13,7 @@ pub struct AppState {
     pub brain: Arc<BrainDb>,
     pub brainctl: Arc<BrainctlClient>,
     pub wallet: Arc<WalletStore>,
+    pub agent_runtime: Arc<AgentRuntime>,
 }
 
 impl AppState {
@@ -34,11 +36,13 @@ impl AppState {
             "mantic-desktop",
         ));
         let wallet = Arc::new(WalletStore::new());
+        let agent_runtime = Arc::new(AgentRuntime::new(brainctl.clone()));
         Ok(Self {
             keyring,
             brain,
             brainctl,
             wallet,
+            agent_runtime,
         })
     }
 }
