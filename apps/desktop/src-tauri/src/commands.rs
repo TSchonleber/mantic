@@ -4,7 +4,7 @@ use crate::{license, pairing};
 
 const DEFAULT_SERVER: &str = "http://localhost:4001";
 
-fn server_url() -> String {
+pub fn server_url() -> String {
     std::env::var("MANTIC_LICENSE_SERVER").unwrap_or_else(|_| DEFAULT_SERVER.to_string())
 }
 

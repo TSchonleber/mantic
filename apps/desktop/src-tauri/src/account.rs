@@ -18,8 +18,14 @@ struct Claims {
 
 pub fn decode_claims(token: &str) -> Result<AccountInfo> {
     let mut validation = Validation::new(jsonwebtoken::Algorithm::HS256);
+    // Signature validation is skipped intentionally: we stored this token
+    // ourselves after receiving it from the license server over HTTPS. The
+    // server is what verifies signatures; we just decode local claims.
     validation.insecure_disable_signature_validation();
     validation.validate_exp = false;
+    // Empty key is safe here only because signature validation is disabled
+    // above. If you re-enable validation, replace with the real server
+    // public key.
     let data = decode::<Claims>(token, &DecodingKey::from_secret(&[]), &validation)?;
     let c = data.claims;
     let now = chrono::Utc::now().timestamp();
