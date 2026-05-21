@@ -7,6 +7,14 @@ pub struct SessionKey {
     signing: SigningKey,
 }
 
+impl std::fmt::Debug for SessionKey {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SessionKey")
+            .field("pubkey_base58", &self.pubkey_base58())
+            .finish_non_exhaustive()
+    }
+}
+
 impl SessionKey {
     /// Generate a new random session keypair using the OS RNG.
     pub fn generate() -> Self {
