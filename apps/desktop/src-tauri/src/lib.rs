@@ -1,3 +1,4 @@
+mod account;
 mod error;
 mod license;
 mod pairing;
