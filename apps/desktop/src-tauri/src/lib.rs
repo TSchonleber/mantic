@@ -1,4 +1,5 @@
 mod account;
+mod brain_db;
 mod bundle;
 mod commands;
 mod error;
