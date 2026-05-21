@@ -42,7 +42,7 @@ pub fn generate_nonce() -> String {
 }
 
 /// What the bridge HTTP handler receives from the browser when the user signs.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct AuthorizePayload {
     pub pubkey: String,    // base58
     pub signature: String, // base58
