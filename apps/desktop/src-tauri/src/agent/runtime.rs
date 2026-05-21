@@ -164,6 +164,34 @@ impl AgentRuntime {
     /// Test-only access to the executor for unit tests + integration tests.
     #[cfg(any(test, feature = "test-helpers"))]
     pub fn executor(&self) -> Arc<PaperExecutor> { self.executor.clone() }
+
+    /// Test-only spawn that bypasses keychain key lookup and uses the
+    /// provided backend. Available to integration tests via the
+    /// `test-helpers` feature.
+    #[cfg(any(test, feature = "test-helpers"))]
+    pub async fn spawn_with_backend(
+        &self,
+        config: AgentConfig,
+        llm: Arc<dyn LlmBackend>,
+    ) -> Result<AgentSummary> {
+        config.validate()?;
+        let _ = self.persist_new_agent(&config).await;
+        let agent = crate::agent::agent::Agent::new(
+            config.clone(),
+            llm,
+            self.executor.clone(),
+            self.brainctl.clone(),
+        );
+        let cloned = agent.clone();
+        tokio::spawn(async move { cloned.run().await });
+        self.agents.lock().await.insert(config.id.clone(), agent.clone());
+        Ok(AgentSummary {
+            id: config.id.clone(),
+            name: config.name.clone(),
+            state: agent.current_state().await,
+            has_llm_key: self.has_llm_key(&config.id).await,
+        })
+    }
 }
 
 impl AgentRuntime {

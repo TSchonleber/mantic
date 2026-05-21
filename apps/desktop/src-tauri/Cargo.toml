@@ -16,6 +16,9 @@ repository = "https://github.com/tschonleber/mantic"
 name = "desktop_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
+[features]
+test-helpers = []
+
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
