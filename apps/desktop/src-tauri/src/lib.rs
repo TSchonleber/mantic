@@ -1,5 +1,6 @@
 mod account;
 mod brain_db;
+mod brainctl_client;
 mod bundle;
 mod commands;
 mod error;
